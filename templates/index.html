@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+  }
+
+  .header {
+    background-color: #007bff;
+    color: #fff;
+    padding: 20px 0;
+  }
+
+  .welcome-message {
+    font-size: 24px;
+    margin-top: 20px;
+  }
+
+  .logout-link {
+    text-decoration: none;
+    background-color: #f00;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 5px;
+  }
+  .upload-link {
+    text-decoration: none;
+    background-color: #006400;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 5px;
+  }
+
+  .login-message {
+    font-size: 18px;
+    margin-top: 20px;
+  }
+
+  .login-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .login-link {
+    text-decoration: none;
+    background-color: #007bff;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 5px;
+    margin-top: 20px;
+  }
+</style>
+
+<div class="header">
+  <h1>Welcome to Poster Evaluation System</h1>
+</div>
+
+<div class="content">
+  {% if user.is_authenticated %}
+    <div class="welcome-message">
+      Hello, Welcome {{ user.username }}!
+    </div>
+    <p><a class="logout-link" href="{% url 'logout' %}">Log Out</a></p><br>
+    <p><a class="upload-link" href="/upload">Poster Evaluation</a></p>
+  {% else %}
+    <div class="login-message">
+      You are not logged in
+    </div>
+    <div class="login-container">
+      <a class="login-link" href="{% url 'login' %}">Log In</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

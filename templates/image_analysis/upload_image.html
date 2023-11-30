@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image Color and Text Detector</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.3.2/jspdf.debug.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            background-color: #007bff;
+            color: #fff;
+            text-align: center;
+            padding: 10px 0;
+            position: relative;
+        }
+        .header h2 {
+            margin: 0;
+        }
+        .header a {
+            position: absolute;
+            top: 50%;
+            right: 20px; /* Adjust the right margin as needed */
+            transform: translateY(-50%);
+            text-decoration: none;
+            color: #fff;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            text-align: center;
+        }
+        .upload-btn {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        .upload-btn:hover {
+            background-color: #0056b3;
+        }
+        .color-swatch {
+            width: 100px;
+            height: 100px;
+            border: 2px solid #333;
+            margin: 20px auto;
+        }
+        .result {
+            text-align: center;
+            margin-top: 20px;
+        }
+        strong {
+            color: #333;
+        }
+        /* Add your custom styling here */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Image Color and Text Detector</h1>
+        </div>
+
+        {% for result in results %}
+        <div class="color-swatch" style="background-color: {{ result.average_color }}"></div>
+
+        <div class="result">
+            <p id="1"><strong>Detected Color:</strong> {{ result.average_color }} ({{ result.color_name }})</p>
+            <p id="2"><strong>Detected Text:</strong> {{ result.detected_text }}</p>
+            <p id="3"><strong>Translated Text:</strong> {{ result.translated_text }}</p>
+            <p id="4"><strong>Contrast Ratio:</strong> {{ result.contrast_ratio }}</p>
+            <p id="5"><strong>Contrast Level:</strong> {{ result.contrast_level }}</p>
+            <p id="6"><strong>Font Size:</strong> {{ result.font_size }}</p>
+            <p id="7"><strong>Color Ratio:</strong> {{ result.color_ratio }}</p>
+            <p id="8"><strong>Overall Score:</strong> {{ result.overall_score }}</p>
+
+        </div>
+        {% endfor %}
+
+        <div class="result">
+            <form method="post" enctype="multipart/form-data" id="uploadForm">
+            {% csrf_token %}
+            <div id="dropArea" class="drop-area">
+                <input type="file" name="images" id="fileInput" accept="image/*" multiple required>
+                <p>OR Drag and drop images here.</p>
+            </div>
+                <!-- Add a dropdown for selecting the target language -->
+                <label for="target_language">Target Language:</label>
+                <select name="target_language" id="target_language">
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="ar">Arabic</option>
+                    <option value="hi">Hindi (Indian)</option>
+                    <!-- Add more language options as needed -->
+                </select>
+                <button class="upload-btn" type="submit">Detect Colour and Text</button>
+            </form>
+        </div>
+
+        <div class="result">
+            <label><input type="checkbox" id="includeColor" checked> Include Detected Color</label>
+            <label><input type="checkbox" id="includeText" checked> Include Detected Text</label>
+            <label><input type="checkbox" id="includeTranslatedText" checked> Include Translated Text</label>
+            <label><input type="checkbox" id="includeContrastRatio" checked> Include Contrast Ratio</label>
+            <label><input type="checkbox" id="includeContrastLevel" checked> Include Contrast Level</label>
+            <label><input type="checkbox" id="includeFontSize" checked> Include Font Size</label>
+            <label><input type="checkbox" id="includeColorRatio" checked> Include Color Ratio</label>
+        </div>
+    </div>
+
+    <div class="result" style="margin-top: 20px;">
+        <!-- Add buttons for downloading PDF, CSV, and TXT files -->
+        <button class="download-btn" id="downloadPdfButton">Download PDF</button>
+        <button class="download-btn" id="downloadCsvButton">Download CSV</button>
+        <button class="download-btn" id="downloadTxtButton">Download TXT</button>
+        <button id="showChartButton">Show Chart</button>
+        <canvas id="metricsChart" width="600" height="400"></canvas>
+
+    </div>
+
+    <script>
+        function downloadTextFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+        }
+
+        function getSelectedContent() {
+            const includeColor = document.getElementById('includeColor').checked;
+            const includeText = document.getElementById('includeText').checked;
+            const includeTranslatedText = document.getElementById('includeTranslatedText').checked;
+            const includeContrastRatio = document.getElementById('includeContrastRatio').checked;
+            const includeContrastLevel = document.getElementById('includeContrastLevel').checked;
+
+            let content = '';
+
+            if (includeColor) {
+                content += document.getElementById('1').textContent + '\n';
+            }
+            if (includeText) {
+                content += document.getElementById('2').textContent + '\n';
+            }
+            if (includeTranslatedText) {
+                content += document.getElementById('3').textContent + '\n';
+            }
+            if (includeContrastRatio) {
+                content += document.getElementById('4').textContent + '\n';
+            }
+            if (includeContrastLevel) {
+                content += document.getElementById('5').textContent + '\n';
+            }
+             if (includeFontSize) {
+                content += document.getElementById('6').textContent + '\n';
+            }
+             if (includeColorRatio) {
+                content += document.getElementById('7').textContent + '\n';
+            }
+
+            return content;
+        }
+
+        document.getElementById('downloadPdfButton').addEventListener('click', function () {
+            const doc = new jsPDF();
+            const selectedContent = getSelectedContent();
+            doc.text(selectedContent, 10, 10);
+            doc.save('analysis_report.pdf');
+        });
+
+        document.getElementById('downloadCsvButton').addEventListener('click', function () {
+        const selectedContent = getSelectedContent();
+        const csvContent = `"Selected Content"\n"${selectedContent.replace(/\n/g, ' ')}"`;
+        downloadTextFile(csvContent, 'analysis_report.csv', 'text/csv');
+    });
+
+        document.getElementById('downloadTxtButton').addEventListener('click', function () {
+        const selectedContent = getSelectedContent();
+        downloadTextFile(selectedContent, 'analysis_report.txt', 'text/plain');
+    });
+    </script>
+
+<script>
+    const dropArea = document.getElementById('dropArea');
+    const fileInput = document.getElementById('fileInput');
+
+    dropArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropArea.classList.add('drag-over');
+    });
+
+    dropArea.addEventListener('dragleave', () => {
+        dropArea.classList.remove('drag-over');
+    });
+
+    dropArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropArea.classList.remove('drag-over');
+        const files = e.dataTransfer.files;
+        fileInput.files = files;
+    });
+</script>
+
+<script>
+document.getElementById('showChartButton').addEventListener('click', function() {
+    var chartWindow = window.open('', 'Chart Window', 'width=600,height=400');
+    var chartCanvas = chartWindow.document.createElement('canvas');
+    chartCanvas.id = 'metricsChart';
+    chartCanvas.width = 600;
+    chartCanvas.height = 400;
+
+    chartWindow.document.body.appendChild(chartCanvas);
+
+    var metricsData = {
+        labels: ['Contrast Ratio','Font Size', 'Color Ratio'],
+        datasets: [{
+            label: 'Metrics',
+            data: [
+                {{ results.0.contrast_ratio }},
+                {{ results.0.font_size }},
+                {{ results.0.color_ratio }},
+
+            ],
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.2)',
+                'rgba(54, 162, 235, 0.2)',
+                'rgba(255, 206, 86, 0.2)',
+                'rgba(75, 192, 192, 0.2)',
+            ],
+            borderColor: [
+                'rgba(255, 99, 132, 1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+            ],
+            borderWidth: 1,
+        }],
+    };
+
+    // Create the chart using Chart.js
+    var ctx = chartCanvas.getContext('2d');
+    var metricsChart = new Chart(ctx, {
+        type: 'bar',
+        data: metricsData,
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,  // Adjust the maximum value based on your data
+                },
+            },
+        },
+    });
+});
+</script>
+
+
+
+
+</body>
+</html>
